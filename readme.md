@@ -79,4 +79,5 @@ Please visit [Xekko Resources](http://resources.xekko.co.uk/forum-11.html "Visit
 #### Notes to Remember
 * Don't try and add avatars into the templates where you haven't enabled them. For example, if there are no permissions for avatars in search results, don't modify the search templates.
 * *dimensions* contains scaled information depending on the *postmaxavatarsize* setting. If you want a consistent square avatar, use a set width with the image:
+
 	<img src='{$flp_avatar['avatar']}' width="44" height="44" alt='' />
