@@ -39,7 +39,7 @@ else
 	$exp = explode(',', $mybb->settings['flp_permissions']);
 	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'search' => $exp[2], 'showthread' => $exp[3]);
 
-	$plugins->add_hook('build_forumbits_forum', 'flpavatar_forum');
+	$plugins->add_hook('build_forumbits_forum', 'flpavatar_forumlist');
 	$plugins->add_hook('forumdisplay_thread', 'flpavatar_threadlist');
 
 	$plugins->add_hook('postbit_announcement', 'flpavatar_thread');
@@ -67,48 +67,79 @@ else
 }
 
 // For forum list
-function flpavatar_forum(&$forum)
+function flpavatar_forumlist(&$_f)
 {
-	global $db, $fcache, $flp_lastpost, $mybb;
-	static $flp_cache;
+	global $cache, $db, $fcache;
 
-	if(!$mybb->settings['flp_permissions']['index'])
+	if(!isset($cache->cache['flp_cache']))
 	{
-		return;
-	}
+		$cache->cache['flp_cache'] = array();
+		$flp_cache = $cache->read('flp_cache');
 
-	if(!isset($flp_cache))
-	{
-		$users = array();
-		$parent = new RecursiveIteratorIterator(new RecursiveArrayIterator($fcache), RecursiveIteratorIterator::SELF_FIRST);
+		$forums = new RecursiveIteratorIterator(new RecursiveArrayIterator($fcache));
 
-		foreach($parent as $child)
+		// This loop goes through each forum and finds the right lastposter
+		foreach($forums as $_forum)
 		{
-			$_child = $parent->getSubIterator();
+			$forum = $forums->getSubIterator();
 
-			if($_child['lastposteruid'])
+			if($forum['fid'])
 			{
-				$_forum = iterator_to_array($_child);
-				$users[] = "'".$_forum['lastposteruid']."'";
+				$forum = iterator_to_array($forum);
+				$flp_cache[$forum['fid']] = $forum;
+
+				if($forum['parentlist'])
+				{
+					$flp_cache[$forum['fid']] = $forum;
+					$flp_cache[$forum['fid']]['avataruid'] = $forum['lastposteruid'];
+
+					$exp = array_reverse(explode(',', $forum['parentlist']));
+
+					foreach($exp as $parent)
+					{
+						if($parent == $forum['fid']) continue;
+						if(isset($flp_cache[$parent]) && $forum['lastpost'] > $flp_cache[$parent]['lastpost'])
+						{
+							$flp_cache[$parent]['lastpost'] = $forum['lastpost'];
+							$flp_cache[$parent]['avataruid'] = $forum['lastposteruid']; // Bubble up to replace parent lastpost
+						}
+					}
+				}
 			}
 		}
 
+		// This loop gathers lastpost users and sorts by user/forums
+		$users = array();
+		foreach($flp_cache as $forum)
+		{
+			if(isset($forum['avataruid']))
+			{
+				$users[$forum['avataruid']][] = $forum['fid'];
+			}
+		}
+
+		// Third loop; this retrieves above users' avatar info
 		if(!empty($users))
 		{
-			$sql = implode(',', $users);
+			$sql = implode(',', array_keys($users));
 			$query = $db->simple_select('users', 'uid, username, username AS userusername, avatar, avatardimensions', "uid IN ({$sql})");
 
 			while($user = $db->fetch_array($query))
 			{
-				$flp_cache[$user['uid']] = format_avatar($user);
+				// Finally, assign avatars
+				$avatar = format_avatar($user);
+				foreach($users[$user['uid']] as $fid)
+				{
+					$flp_cache[$fid]['flp_avatar'] = $avatar;
+				}
 			}
 		}
+
+		// Encore! Replace our inline cache
+		$cache->cache['flp_cache'] = $flp_cache;
 	}
 
-	if(isset($forum['lastposteruid']))
-	{
-		$forum['flp_lastpost'] = $flp_cache[$forum['lastposteruid']];
-	}
+	$_f['flp_lastpost'] = $cache->cache['flp_cache'][$_f['fid']]['flp_avatar'];
 }
 
 // For thread list (in search and forumdisplay)
@@ -211,7 +242,7 @@ function flpavatar_thread(&$post)
 
 function flpavatar_end()
 {
-	global $db, $flp_avatar, $thread;
+	global $db, $flp_avatar, $mybb, $thread;
 
 	if(!$mybb->settings['flp_permissions']['showthread'])
 	{
