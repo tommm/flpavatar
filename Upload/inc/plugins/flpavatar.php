@@ -24,7 +24,7 @@ function flpavatar_info()
 		'author' => 'Tomm',
 		'authorsite' => 'http://xekko.co.uk',
 		'version' => '1.0',
-		'guid' => '',
+		'guid' => '9fbd88aaa25448e1bd26ca5b523a0dcd',
 		'compatibility' => '*'
 	);
 }
