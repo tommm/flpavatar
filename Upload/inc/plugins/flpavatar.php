@@ -23,7 +23,7 @@ function flpavatar_info()
 		'website' => 'http://resources.xekko.co.uk',
 		'author' => 'Tomm',
 		'authorsite' => 'http://xekko.co.uk',
-		'version' => '1.0',
+		'version' => '1.0.1',
 		'guid' => '9fbd88aaa25448e1bd26ca5b523a0dcd',
 		'compatibility' => '*'
 	);
@@ -32,12 +32,11 @@ function flpavatar_info()
 if(defined('IN_ADMINCP'))
 {
 	require_once MYBB_ROOT.'inc/plugins/flpavatar_acp.php';
-	return;
 }
 else
 {
 	$exp = explode(',', $mybb->settings['flp_permissions']);
-	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'search' => $exp[2], 'showthread' => $exp[3]);
+	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'pm' => $exp[4], 'search' => $exp[2], 'showthread' => $exp[3]);
 
 	$plugins->add_hook('build_forumbits_forum', 'flpavatar_forumlist');
 	$plugins->add_hook('forumdisplay_thread', 'flpavatar_threadlist');
@@ -57,19 +56,30 @@ else
 	}
 
 	// Maintenance
+	$plugins->add_hook('forumdisplay_announcement', 'flpavatar_anno');
+	$plugins->add_hook('usercp_do_avatar_end', 'flpavatar_avatar_update');
 	if(THIS_SCRIPT == 'modcp.php' && in_array($mybb->input['action'], array('do_new_announcement', 'do_edit_announcement')) && $mybb->settings['flp_permissions']['forumdisplay'])
 	{
 		$plugins->add_hook('redirect', 'flpavatar_anno_update');
 	}
 
-	$plugins->add_hook('forumdisplay_announcement', 'flpavatar_anno');
-	$plugins->add_hook('usercp_do_avatar_end', 'flpavatar_avatar_update');
+	if(THIS_SCRIPT == 'private.php')
+	{
+		$plugins->add_hook('private_end', 'flpavatar_private_end');
+		$plugins->add_hook("private_results_end", "flpavatar_private_end");
+		$plugins->add_hook("private_tracking_end", "flpavatar_private_end");
+	}
 }
 
 // For forum list
 function flpavatar_forumlist(&$_f)
 {
-	global $cache, $db, $fcache;
+	global $cache, $db, $fcache, $mybb;
+
+	if(!$mybb->settings['flp_permissions']['index'])
+	{
+		return;
+	}
 
 	if(!isset($cache->cache['flp_cache']))
 	{
@@ -325,6 +335,56 @@ function flpavatar_anno_update($args)
 	}
 
 	$cache->update('inline_avatars', $inline_avatars);
+}
+
+// For private messages and tracking
+function flpavatar_private_end()
+{
+	global $db, $messagelist, $unreadmessages, $readmessages;
+
+	if(!$mybb->settings['flp_permissions']['pm'])
+	{
+		return;
+	}
+
+	$users = array();
+	foreach(array($messagelist, $unreadmessages, $readmessages) as $content)
+	{
+		if(!$content) continue;
+
+		preg_match_all('#<flp_avatar\[([0-9]+)\]#', $content, $matches);
+
+		if(is_array($matches[1]) && !empty($matches[1]))
+		{
+			foreach($matches[1] as $user)
+			{
+				if(!intval($user)) continue;
+				$users[] = intval($user);
+			}
+		}
+	}
+
+	if(!empty($users))
+	{
+		$sql = implode(',', $users);
+		$query = $db->simple_select('users', 'uid, username, username AS userusername, avatar, avatardimensions', "uid IN ({$sql})");
+
+		$find = $replace = array();
+		while($user = $db->fetch_array($query))
+		{
+			$parameters = format_avatar($user);
+
+			foreach($parameters as $piece => $cake)
+			{
+				$find[] = "<flp_avatar[{$user['uid']}]['{$piece}']>";
+				$replace[] = $cake;
+			}
+		}
+
+		if(isset($messagelist)) $messagelist = str_replace($find, $replace, $messagelist);
+		if(isset($readmessages)) $readmessages = str_replace($find, $replace, $readmessages);
+		if(isset($unreadmessages)) $unreadmessages = str_replace($find, $replace, $unreadmessages);
+	}
 }
 
 // format_avatar is a 1.8 function; create it if our party doesn't have >= 1.7 (LOSERS, hah).

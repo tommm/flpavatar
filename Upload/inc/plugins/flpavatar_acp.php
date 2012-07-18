@@ -41,7 +41,7 @@ function flpavatar_install()
 		'title' => 'First and Last Post Avatars',
 		'description' => 'Options for displaying first and last post avatars across the forum.',
 		'optionscode' => 'text',
-		'value' => '0,0,0,0',
+		'value' => '0,0,0,0,0',
 		'disporder' => ++$disporder,
 		'gid' => 7,
 		'isdefault' => 0
@@ -82,6 +82,44 @@ function flpavatar_uninstall()
 	rebuild_settings();
 }
 
+function flpavatar_activate()
+{
+	global $cache, $db, $mybb;
+
+	$info = flpavatar_info();
+	if(version_compare($info['version'], '1.0.1', '<='))
+	{
+		$permissions = explode(',', $mybb->settings['flp_permissions']);
+
+		if(count($permissions) == 4)
+		{
+			// Missing our PM setting
+			$permissions[] = 0;
+			$db->update_query('settings', array('value' => implode(',', $permissions)), "name = 'flp_permissions'");
+
+			rebuild_settings();
+		}
+	}
+
+	$query = $db->simple_select('announcements', 'uid');
+	$query = $db->query("
+		SELECT DISTINCT(a.uid) as uid, u.username, username AS userusername, avatar, avatardimensions
+		FROM ".TABLE_PREFIX."announcements a
+		LEFT JOIN ".TABLE_PREFIX."users u ON (u.uid = a.uid)
+	");
+
+	if($db->num_rows($query))
+	{
+		$inline_avatars = array();
+		while($user = $db->fetch_array($query))
+		{
+			$inline_avatars[$user['uid']] = format_avatar($user);
+		}
+
+		$cache->update('inline_avatars', $inline_avatars);
+	}
+}
+
 function flpavatar_is_installed()
 {
 	global $mybb;
@@ -108,6 +146,7 @@ function flpavatar_permissions(&$row)
 	$setting = array(
 		'forumdisplay' => array('name' => 'Forum Display', 'description' => 'Generate first and last post avatar information on Forum Display', 'value' => $permissions[0]),
 		'index' => array('name' => 'Forum Index', 'description' => 'Generate last post avatar information on the Forum Index', 'value' => $permissions[1]),
+		'pm' => array('name' => 'Private Messages', 'description' => 'Generate avatar information in Private Messaging folders and tracking messages', 'value' => $permissions[4]),
 		'search' => array('name' => 'Search Results', 'description' => 'Generate first and last post avatar information on Search Results', 'value' => $permissions[2]),
 		'showthread' => array('name' => 'Show Thread', 'description' => 'Generate first post information on Show Thread', 'value' => $permissions[3]),
 	);
@@ -132,7 +171,7 @@ function flpavatar_permissions_save()
 	}
 
 	$values = array();
-	$permissions = array('forumdisplay', 'index', 'search', 'showthread');
+	$permissions = array('forumdisplay', 'index', 'pm', 'search', 'showthread');
 
 	foreach($permissions as $setting)
 	{

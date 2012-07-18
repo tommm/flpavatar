@@ -1,7 +1,7 @@
 [![Xekko](http://xekko.co.uk/public/images/logo_xekko_color.png "Xekko Resources")](http://resources.xekko.co.uk "Xekko Resources")
 
 ## First / Last Post Avatar
-This plugin allows you to generate avatar information for the first and/or last post for use on your forum's home page (index), forum display (forumdisplay), search results and thread page (showthread).
+This plugin allows you to generate avatar information for the first and/or last post for use on your forum's home page (index), forum display (forumdisplay), private messages (including tracking), search results and thread page (showthread).
 
 While this plugin generates the information it does not automatically create the image. It is up to you to decide how best to implement the avatar onto the page.
 
@@ -48,6 +48,22 @@ For first post avatars, in forumdisplay_announcements_announcement and forumdisp
 For last post avatars, in forumdisplay_thread:
 
 	<span><a href='{$flp_lastpost['profile']}' title='Lastpost by {$flp_lastpost['username']}'><img src='{$flp_lastpost['avatar']}' {$flp_lastpost['dimensions']} alt='' /></a></span>
+
+#### Private Messages
+First / Last Post Avatar also provides support for avatars in Private Messaging (PM) folders and within tracking read/unread messages. The syntax in templates is slightly different here due to the lack of hooks so please follow carefully.
+
+##### Example
+For PM folders, in private_messagebit:
+
+	<span><a href='<flp_avatar[{$tofromuid}]['profile']>' title='<flp_avatar[{$tofromuid}]['username']>'><img src='<flp_avatar[{$tofromuid}]['avatar']>' <flp_avatar[{$tofromuid}]['dimensions']> alt='' /></a></span>
+
+For PM tracking, read messages, in private_tracking_readmessage:
+
+	<span><a href='<flp_avatar[{$readmessage['toid']}]['profile']>' title='<flp_avatar[{$readmessage['toid']}]['username']>'><img src='<flp_avatar[{$readmessage['toid']}]['avatar']>' <flp_avatar[{$readmessage['toid']}]['dimensions']> alt='' /></a></span>
+
+For PM tracking, unread messages, in private_tracking_unreadmessage:
+
+	<span><a href='<flp_avatar[{$unreadmessage['toid']}]['profile']>' title='<flp_avatar[{$unreadmessage['toid']}]['username']>'><img src='<flp_avatar[{$unreadmessage['toid']}]['avatar']>' <flp_avatar[{$unreadmessage['toid']}]['dimensions']> alt='' /></a></span>
 
 #### Search Results
 Once enabled, avatar information is generated for both the first and last poster of the forum if the results are thread based and the author avatar information is generated if the results are post based (available via *$flp_avatar*).
