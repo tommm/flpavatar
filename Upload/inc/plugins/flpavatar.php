@@ -29,7 +29,7 @@ function flpavatar_info()
 		'website' => 'http://resources.xekko.co.uk',
 		'author' => 'Tomm',
 		'authorsite' => 'http://xekko.co.uk',
-		'version' => '1.0.1',
+		'version' => '1.0.2',
 		'guid' => '9fbd88aaa25448e1bd26ca5b523a0dcd',
 		'compatibility' => '*'
 	);

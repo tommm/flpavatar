@@ -37,7 +37,7 @@ For avatars to show you must add the following codes to each template. You don't
 Once enabled, avatar information will be generated for the last poster of the forum.
 
 ##### Example
-In forumbit_depth2_forum_lastpost:
+In *forumbit_depth2_forum_lastpost*:
 
 	<span><a href='{$forum['flp_lastpost']['profile']}' title='Lastpost by {$forum['flp_lastpost']['username']}'><img src='{$forum['flp_lastpost']['avatar']}' {$forum['flp_lastpost']['dimensions']} alt='' /></a></span>
 
@@ -46,7 +46,7 @@ In forumbit_depth2_forum_lastpost:
 Once enabled, avatar information is generated for both the first and last poster of the forum.
 
 ##### Example
-For first post avatars, in forumdisplay_announcements_announcement and forumdisplay_thread:
+For first post avatars, in *forumdisplay_announcements_announcement* and *forumdisplay_thread*:
 
 	<span><a href='{$flp_avatar['profile']}' title='Started by {$flp_avatar['username']}'><img src='{$flp_avatar['avatar']}' {$flp_avatar['dimensions']} alt='' /></a></span>
 
@@ -59,15 +59,15 @@ For last post avatars, in forumdisplay_thread:
 First / Last Post Avatar also provides support for avatars in Private Messaging (PM) folders and within tracking read/unread messages. The syntax in templates is slightly different here due to the lack of hooks so please follow carefully.
 
 ##### Example
-For PM folders, in private_messagebit:
+For PM folders, in *private_messagebit*:
 
 	<span><a href='<flp_avatar[{$tofromuid}]['profile']>' title='<flp_avatar[{$tofromuid}]['username']>'><img src='<flp_avatar[{$tofromuid}]['avatar']>' <flp_avatar[{$tofromuid}]['dimensions']> alt='' /></a></span>
 
-For PM tracking, read messages, in private_tracking_readmessage:
+For PM tracking, read messages, in *private_tracking_readmessage*:
 
 	<span><a href='<flp_avatar[{$readmessage['toid']}]['profile']>' title='<flp_avatar[{$readmessage['toid']}]['username']>'><img src='<flp_avatar[{$readmessage['toid']}]['avatar']>' <flp_avatar[{$readmessage['toid']}]['dimensions']> alt='' /></a></span>
 
-For PM tracking, unread messages, in private_tracking_unreadmessage:
+For PM tracking, unread messages, in *private_tracking_unreadmessage*:
 
 	<span><a href='<flp_avatar[{$unreadmessage['toid']}]['profile']>' title='<flp_avatar[{$unreadmessage['toid']}]['username']>'><img src='<flp_avatar[{$unreadmessage['toid']}]['avatar']>' <flp_avatar[{$unreadmessage['toid']}]['dimensions']> alt='' /></a></span>
 
@@ -76,11 +76,11 @@ For PM tracking, unread messages, in private_tracking_unreadmessage:
 Once enabled, avatar information is generated for both the first and last poster of the forum if the results are thread based and the author avatar information is generated if the results are post based (available via *$flp_avatar*).
 
 ##### Example
-For thread and post based results, the first post avatar, in search_results_posts_post and search_results_threads_thread:
+For thread and post based results, the first post avatar, in *search_results_posts_post* and *search_results_threads_thread*:
 
 	<span><a href='{$flp_avatar['profile']}' title='Started by {$flp_avatar['username']}'><img src='{$flp_avatar['avatar']}' {$flp_avatar['dimensions']} alt='' /></a></span>
 
-For thread based results, the last post avatar, in search_results_threads_thread:
+For thread based results, the last post avatar, in *search_results_threads_thread*:
 
 	<span><a href='{$flp_lastpost['profile']}' title='Lastpost by {$flp_lastpost['username']}'><img src='{$flp_lastpost['avatar']}' {$flp_lastpost['dimensions']} alt='' /></a></span>
 
@@ -89,7 +89,7 @@ For thread based results, the last post avatar, in search_results_threads_thread
 Once enabled, avatar information is available for the first poster of the thread on all thread pages.
 
 ##### Example
-For first post avatar, in showthread:
+For first post avatar, in *showthread*:
 
 	<span><a href='{$flp_avatar['profile']}' title='Started by {$flp_avatar['username']}'><img src='{$flp_avatar['avatar']}' {$flp_avatar['dimensions']} alt='' /></a></span>
 
@@ -101,6 +101,10 @@ You can also add support for a Started By notice:
 ### Support
 Please visit [Xekko Resources](http://resources.xekko.co.uk/forum-11.html "Visit Xekko Resources") for support.
 
+#### Styling Avatars
+I don't provide support for styling the avatars and how they appear on your forum - including floating it to the right or adding borders around it. That's up to you to decide!
+
 #### Notes to Remember
 * Don't try and add avatars into the templates where you haven't enabled them. For example, if there are no permissions for avatars in search results, don't modify the search templates.
-* *dimensions* contains scaled information depending on the *postmaxavatarsize* setting. If you want a consistent square avatar, use a set width with the image by replacing *dimensions* with `width="44" height="44"` (or whatever size you're aiming for).
+* If you use a different default avatar remember to change its default size. You can do this at the top of ./inc/plugins/flpavatar.php and editing *DEF_FP_SIZE*.
+* *dimensions* contains scaled information depending on the *postmaxavatarsize* setting. If you want a consistent square avatar, use a set width with the image by replacing *dimensions* with `width="44" height="44"` (or whatever size you're aiming for). You can hardcode this setting globally by editing *MAX_FP_SIZE* at the top of ./inc/plugins/flpavatar.php.
