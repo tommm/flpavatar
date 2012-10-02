@@ -146,9 +146,9 @@ function flpavatar_permissions(&$row)
 	$setting = array(
 		'forumdisplay' => array('name' => 'Forum Display', 'description' => 'Generate first and last post avatar information on Forum Display', 'value' => $permissions[0]),
 		'index' => array('name' => 'Forum Index', 'description' => 'Generate last post avatar information on the Forum Index', 'value' => $permissions[1]),
-		'pm' => array('name' => 'Private Messages', 'description' => 'Generate avatar information in Private Messaging folders and tracking messages', 'value' => $permissions[4]),
-		'search' => array('name' => 'Search Results', 'description' => 'Generate first and last post avatar information on Search Results', 'value' => $permissions[2]),
-		'showthread' => array('name' => 'Show Thread', 'description' => 'Generate first post information on Show Thread', 'value' => $permissions[3]),
+		'pm' => array('name' => 'Private Messages', 'description' => 'Generate avatar information in Private Messaging folders and tracking messages', 'value' => $permissions[2]),
+		'search' => array('name' => 'Search Results', 'description' => 'Generate first and last post avatar information on Search Results', 'value' => $permissions[3]),
+		'showthread' => array('name' => 'Show Thread', 'description' => 'Generate first post information on Show Thread', 'value' => $permissions[4]),
 	);
 
 	$i = 1;

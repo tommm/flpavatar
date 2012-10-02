@@ -14,6 +14,12 @@ if(!defined('IN_MYBB'))
 	die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
 
+// Set this to the dimensions of your default avatar
+define('DEF_FP_SIZE', '44|44');
+
+// Set this if you want to override the maximum post size, not really needed
+//define('MAX_FP_SIZE', '100x100'); 
+
 global $mybb;
 function flpavatar_info()
 {
@@ -58,6 +64,7 @@ else
 	// Maintenance
 	$plugins->add_hook('forumdisplay_announcement', 'flpavatar_anno');
 	$plugins->add_hook('usercp_do_avatar_end', 'flpavatar_avatar_update');
+
 	if(THIS_SCRIPT == 'modcp.php' && in_array($mybb->input['action'], array('do_new_announcement', 'do_edit_announcement')) && $mybb->settings['flp_permissions']['forumdisplay'])
 	{
 		$plugins->add_hook('redirect', 'flpavatar_anno_update');
@@ -275,16 +282,23 @@ function flpavatar_avatar_update()
 {
 	global $cache, $db, $extra_user_updates, $mybb, $updated_avatar, $user;
 
-	$inline_avatars = $cache->read('inline_avatars');
-	$user = array_merge(($user) ? $user : $mybb->user, ($extra_user_updates) ? $extra_user_updates : $updated_avatar);
+	$user = ($user) ? $user : $mybb->user;
 
 	if(!$inline_avatars[$user['uid']])
 	{
 		return; // No need to keep this inline as we'll never use it
 	}
 
-	$inline_avatars[$user['uid']] = flp_format_avatar($user);
-	$cache->update('inline_avatars', $inline_avatars);
+	$update = ($extra_user_updates) ? $extra_user_updates : $updated_avatar;
+
+	if(is_array($update))
+	{
+		$inline_avatars = $cache->read('inline_avatars');
+		$user = array_merge($user, $update);	
+
+		$inline_avatars[$user['uid']] = flp_format_avatar($user);
+		$cache->update('inline_avatars', $inline_avatars);
+	}
 }
 
 // Detection for announcements
@@ -317,7 +331,7 @@ function flpavatar_anno_update($args)
 	$inline_avatars = $cache->read('inline_avatars');
 	$anno = ($update_announcement) ? $update_announcement : $insert_announcement;
 
-	if($inline_avatars[$anno['uid']])
+	if(is_array($inline_avatars) && $inline_avatars[$anno['uid']])
 	{
 		return; // No need to re-cache
 	}
@@ -394,8 +408,17 @@ function flp_format_avatar($user)
 	if($mybb->version_code >= 1700)
 	{
 		// 1.8 has a slightly different syntax
+		$dimensions = ($user['avatar']) ? $user['avatardimensions'] : (defined('DEF_FP_SIZE')) ? DEF_FP_SIZE : '44|44';
 		$size = (defined('MAX_FP_SIZE')) ? MAX_FP_SIZE : $mybb->settings['postmaxavatarsize'];
-		return format_avatar($user['avatar'], $user['avatardimensions'], $size);
+
+		$avatar = format_avatar($user['avatar'], $dimensions, $size);
+
+		return array(
+			'avatar' => $avatar['image'],
+			'dimensions' => $avatar['width_height'],
+			'username' => $user['username'],
+			'profile' => get_profile_link($user['uid'])
+		);
 	}
 
 	return format_avatar($user);
@@ -423,7 +446,7 @@ if(!function_exists('format_avatar'))
 		$avatar = ($user['avatar']) ? htmlspecialchars_uni($user['avatar']) : $mybb->settings['bburl'].'/images/default_avatar.gif';
 
 		$avatar_width_height = '';
-		$dimensions = explode('|', ($user['avatar']) ? $user['avatardimensions'] : '44|44'); // 44|44 must match the default_avatar image
+		$dimensions = explode('|', ($user['avatar']) ? $user['avatardimensions'] : (defined('DEF_FP_SIZE')) ? DEF_FP_SIZE : '44|44');
 
 		if(is_array($dimensions) && $dimensions[0] && $dimensions[1])
 		{
