@@ -36,7 +36,7 @@ if(defined('IN_ADMINCP'))
 else
 {
 	$exp = explode(',', $mybb->settings['flp_permissions']);
-	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'pm' => $exp[4], 'search' => $exp[2], 'showthread' => $exp[3]);
+	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'pm' => $exp[2], 'search' => $exp[3], 'showthread' => $exp[4]);
 
 	$plugins->add_hook('build_forumbits_forum', 'flpavatar_forumlist');
 	$plugins->add_hook('forumdisplay_thread', 'flpavatar_threadlist');
@@ -137,7 +137,7 @@ function flpavatar_forumlist(&$_f)
 			while($user = $db->fetch_array($query))
 			{
 				// Finally, assign avatars
-				$avatar = format_avatar($user);
+				$avatar = flp_format_avatar($user);
 				foreach($users[$user['uid']] as $fid)
 				{
 					$flp_cache[$fid]['flp_avatar'] = $avatar;
@@ -193,7 +193,7 @@ function flpavatar_threadlist()
 
 				while($user = $db->fetch_array($query))
 				{
-					$flp_cache[$user['uid']] = format_avatar($user);
+					$flp_cache[$user['uid']] = flp_format_avatar($user);
 				}
 			}
 		}
@@ -213,7 +213,7 @@ function flpavatar_threadlist()
 			{
 				if(!isset($flp_cache[$user['uid']]))
 				{
-					$flp_cache[$user['uid']] = format_avatar($user);
+					$flp_cache[$user['uid']] = flp_format_avatar($user);
 				}
 			}
 		}
@@ -247,7 +247,7 @@ function flpavatar_thread(&$post)
 		return; // This is not the post you are looking for...
 	}
 
-	$flp_avatar = format_avatar($post);
+	$flp_avatar = flp_format_avatar($post);
 }
 
 function flpavatar_end()
@@ -266,7 +266,7 @@ function flpavatar_end()
 		$query = $db->simple_select('users', 'uid, username, username AS userusername, avatar, avatardimensions', "uid = '{$uid}'");
 
 		$user = $db->fetch_array($query);
-		$flp_avatar = format_avatar($user);
+		$flp_avatar = flp_format_avatar($user);
 	}
 }
 
@@ -283,7 +283,7 @@ function flpavatar_avatar_update()
 		return; // No need to keep this inline as we'll never use it
 	}
 
-	$inline_avatars[$user['uid']] = format_avatar($user);
+	$inline_avatars[$user['uid']] = flp_format_avatar($user);
 	$cache->update('inline_avatars', $inline_avatars);
 }
 
@@ -324,14 +324,14 @@ function flpavatar_anno_update($args)
 
 	if($anno['uid'] == $mybb->user['uid'])
 	{
-		$inline_avatars[$anno['uid']] = format_avatar($mybb->user);
+		$inline_avatars[$anno['uid']] = flp_format_avatar($mybb->user);
 	}
 	else
 	{
 		$query = $db->simple_select('users', 'uid, username, username AS userusername, avatar, avatardimensions', "uid = '{$anno['uid']}'");
 		$user = $db->fetch_array($query);
 
-		$inline_avatars[$user['uid']] = format_avatar($user);
+		$inline_avatars[$user['uid']] = flp_format_avatar($user);
 	}
 
 	$cache->update('inline_avatars', $inline_avatars);
@@ -340,7 +340,7 @@ function flpavatar_anno_update($args)
 // For private messages and tracking
 function flpavatar_private_end()
 {
-	global $db, $messagelist, $unreadmessages, $readmessages;
+	global $db, $messagelist, $mybb, $unreadmessages, $readmessages;
 
 	if(!$mybb->settings['flp_permissions']['pm'])
 	{
@@ -372,7 +372,7 @@ function flpavatar_private_end()
 		$find = $replace = array();
 		while($user = $db->fetch_array($query))
 		{
-			$parameters = format_avatar($user);
+			$parameters = flp_format_avatar($user);
 
 			foreach($parameters as $piece => $cake)
 			{
@@ -387,12 +387,26 @@ function flpavatar_private_end()
 	}
 }
 
+function flp_format_avatar($user)
+{
+	global $mybb;
+
+	if($mybb->version_code >= 1700)
+	{
+		// 1.8 has a slightly different syntax
+		$size = (defined('MAX_FP_SIZE')) ? MAX_FP_SIZE : $mybb->settings['postmaxavatarsize'];
+		return format_avatar($user['avatar'], $user['avatardimensions'], $size);
+	}
+
+	return format_avatar($user);
+}
+
 // format_avatar is a 1.8 function; create it if our party doesn't have >= 1.7 (LOSERS, hah).
 if(!function_exists('format_avatar'))
 {
 	function format_avatar($user)
 	{
-		global $cache, $mybb;
+		global $mybb;
 		static $users;
 
 		if(!isset($users))
