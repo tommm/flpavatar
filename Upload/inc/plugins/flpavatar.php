@@ -280,26 +280,26 @@ function flpavatar_end()
 // Upkeep of user's avatar
 function flpavatar_avatar_update()
 {
-	global $cache, $db, $extra_user_updates, $mybb, $updated_avatar, $user;
+    global $cache, $db, $extra_user_updates, $mybb, $updated_avatar, $user;
 
-	$user = ($user) ? $user : $mybb->user;
+    $user = ($user) ? $user : $mybb->user;
+    $inline_avatars = $cache->read('inline_avatars');
 
-	if(!$inline_avatars[$user['uid']])
-	{
-		return; // No need to keep this inline as we'll never use it
-	}
+    if(!$inline_avatars[$user['uid']])
+    {
+        return; // No need to keep this inline as we'll never use it
+    }
 
-	$update = ($extra_user_updates) ? $extra_user_updates : $updated_avatar;
+    $update = ($extra_user_updates) ? $extra_user_updates : $updated_avatar;
 
-	if(is_array($update))
-	{
-		$inline_avatars = $cache->read('inline_avatars');
-		$user = array_merge($user, $update);	
+    if(is_array($update))
+    {
+        $user = array_merge($user, $update);    
 
-		$inline_avatars[$user['uid']] = flp_format_avatar($user);
-		$cache->update('inline_avatars', $inline_avatars);
-	}
-}
+        $inline_avatars[$user['uid']] = flp_format_avatar($user);
+        $cache->update('inline_avatars', $inline_avatars);
+    }
+} 
 
 // Detection for announcements
 function flpavatar_anno()
