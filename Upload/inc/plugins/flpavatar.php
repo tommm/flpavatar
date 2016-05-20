@@ -319,7 +319,7 @@ function flpavatar_anno()
 			'avatar' => $inline_avatars[$announcement['uid']]['avatar'],
 			'dimensions' => $inline_avatars[$announcement['uid']]['dimensions'],
 			'username' => $announcement['username'],
-			'profile' => $announcement['profilelink']
+			'profile' => $inline_avatars[$announcement['uid']]['profile']
 		);
 	}
 }
