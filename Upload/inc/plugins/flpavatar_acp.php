@@ -63,7 +63,7 @@ function flpavatar_install()
 		$inline_avatars = array();
 		while($user = $db->fetch_array($query))
 		{
-			$inline_avatars[$user['uid']] = format_avatar($user);
+			$inline_avatars[$user['uid']] = flp_format_avatar($user);
 		}
 
 		$cache->update('inline_avatars', $inline_avatars);
@@ -113,7 +113,7 @@ function flpavatar_activate()
 		$inline_avatars = array();
 		while($user = $db->fetch_array($query))
 		{
-			$inline_avatars[$user['uid']] = format_avatar($user);
+			$inline_avatars[$user['uid']] = flp_format_avatar($user);
 		}
 
 		$cache->update('inline_avatars', $inline_avatars);
