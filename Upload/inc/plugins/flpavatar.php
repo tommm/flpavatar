@@ -1,10 +1,12 @@
 <?php
 /*
 +---------------------------------------------------------------------------
-|	First and Last Post Avatar
+|	Optimized First and Last Post Avatar
 |	=============================================
 |	by Tom Moore (www.xekko.co.uk)
 |	Copyright 2012 Mooseypx Design / Xekko
+|
+|	Edited by: effone
 |	=============================================
 +---------------------------------------------------------------------------
 */
@@ -14,19 +16,22 @@ if(!defined('IN_MYBB'))
 	die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
 
-// Set this to the dimensions of your default avatar
-define('DEF_FP_SIZE', '44|44');
+// Set optimized avatar directory
+define('OPTIMIZED_AV', 'uploads'.DIRECTORY_SEPARATOR.'avatars'.DIRECTORY_SEPARATOR.'optimized');
 
 // Set this if you want to override the maximum post size, not really needed
-//define('MAX_FP_SIZE', '100x100'); 
+//define('MAX_FP_SIZE', '100x100');
 
 global $mybb;
 function flpavatar_info()
 {
+	global $lang;
+	$lang->load('flpavatar');
+
 	return array(
-		'name' => 'Last/First Post Avatar',
-		'description' => 'A plugin that allows the first and last post avatar around the forum.',
-		'website' => 'http://resources.xekko.co.uk',
+		'name' => $lang->flp_name,
+		'description' => $lang->flp_desc,
+		'website' => 'https://github.com/tommm/flpavatar',
 		'author' => 'Tomm',
 		'authorsite' => 'http://xekko.co.uk',
 		'version' => '1.0.2',
@@ -41,8 +46,8 @@ if(defined('IN_ADMINCP'))
 }
 else
 {
-	$exp = explode(',', $mybb->settings['flp_permissions']);
-	$mybb->settings['flp_permissions'] = array('forumdisplay' => $exp[0], 'index' => $exp[1], 'pm' => $exp[2], 'search' => $exp[3], 'showthread' => $exp[4]);
+	$mybb->settings['flp_avail'] = explode(',', $mybb->settings['flp_avail']);
+	foreach($mybb->settings['flp_avail'] as $key => $value)	$mybb->settings['flp_avail'][$key] = trim($value);
 
 	$plugins->add_hook('build_forumbits_forum', 'flpavatar_forumlist');
 	$plugins->add_hook('forumdisplay_thread', 'flpavatar_threadlist');
@@ -54,7 +59,7 @@ else
 	$plugins->add_hook('showthread_end', 'flpavatar_end');
 
 	// Search
-	if(THIS_SCRIPT == 'search.php' && $mybb->settings['flp_permissions']['search'])
+	if(THIS_SCRIPT == 'search.php' && in_array('search', $mybb->settings['flp_avail']))
 	{
 		define('IN_SEARCH', 1);
 		$plugins->add_hook('search_results_thread', 'flpavatar_threadlist');
@@ -65,7 +70,7 @@ else
 	$plugins->add_hook('forumdisplay_announcement', 'flpavatar_anno');
 	$plugins->add_hook('usercp_do_avatar_end', 'flpavatar_avatar_update');
 
-	if(THIS_SCRIPT == 'modcp.php' && in_array($mybb->input['action'], array('do_new_announcement', 'do_edit_announcement')) && $mybb->settings['flp_permissions']['forumdisplay'])
+	if(THIS_SCRIPT == 'modcp.php' && in_array($mybb->input['action'], array('do_new_announcement', 'do_edit_announcement')) && in_array('forumdisplay', $mybb->settings['flp_avail']))
 	{
 		$plugins->add_hook('redirect', 'flpavatar_anno_update');
 	}
@@ -83,7 +88,7 @@ function flpavatar_forumlist(&$_f)
 {
 	global $cache, $db, $fcache, $mybb;
 
-	if(!$mybb->settings['flp_permissions']['index'])
+	if(!in_array('forumindex', $mybb->settings['flp_avail']))
 	{
 		return;
 	}
@@ -145,6 +150,7 @@ function flpavatar_forumlist(&$_f)
 			{
 				// Finally, assign avatars
 				$avatar = flp_format_avatar($user);
+				
 				foreach($users[$user['uid']] as $fid)
 				{
 					$flp_cache[$fid]['flp_avatar'] = $avatar;
@@ -171,7 +177,7 @@ function flpavatar_threadlist()
 		$flp_type = (defined('IN_SEARCH')) ? 2 : 1;
 		$cache = ($thread_cache) ? $thread_cache : $threadcache;
 
-		if($flp_type == 1 && !$mybb->settings['flp_permissions']['forumdisplay'] || $flp_type == 2 && !$mybb->settings['flp_permissions']['search'])
+		if($flp_type == 1 && !in_array('forumdisplay', $mybb->settings['flp_avail']) || $flp_type == 2 && !in_array('search', $mybb->settings['flp_avail']))
 		{
 			$flp_cache = array();
 			return;
@@ -249,7 +255,7 @@ function flpavatar_thread(&$post)
 {
 	global $flp_avatar, $mybb, $thread;
 
-	if(isset($flp_avatar) || $thread['firstpost'] != $post['pid'] || !$mybb->settings['flp_permissions']['showthread'])
+	if(isset($flp_avatar) || $thread['firstpost'] != $post['pid'] || !in_array('showthread', $mybb->settings['flp_avail']))
 	{
 		return; // This is not the post you are looking for...
 	}
@@ -261,7 +267,7 @@ function flpavatar_end()
 {
 	global $db, $flp_avatar, $mybb, $thread;
 
-	if(!$mybb->settings['flp_permissions']['showthread'])
+	if(!in_array('showthread', $mybb->settings['flp_avail']))
 	{
 		return;
 	}
@@ -280,10 +286,20 @@ function flpavatar_end()
 // Upkeep of user's avatar
 function flpavatar_avatar_update()
 {
-    global $cache, $db, $extra_user_updates, $mybb, $updated_avatar, $user;
+	global $cache, $db, $extra_user_updates, $mybb, $updated_avatar, $user;
 
     $user = ($user) ? $user : $mybb->user;
     $inline_avatars = $cache->read('inline_avatars');
+	$optimized_avatars = glob(MYBB_ROOT.OPTIMIZED_AV.DIRECTORY_SEPARATOR.$user['uid'].".*");
+	
+	// Flash optimized avatars
+	if(!empty($optimized_avatars))
+	{
+		foreach($optimized_avatars as $optimized_avatar)
+		{
+			unlink($optimized_avatar);
+		}
+	}
 
     if(!$inline_avatars[$user['uid']])
     {
@@ -306,7 +322,7 @@ function flpavatar_anno()
 {
 	global $announcement, $cache, $flp_avatar, $mybb;
 
-	if(!$mybb->settings['flp_permissions']['forumdisplay'])
+	if(!in_array('forumdisplay', $mybb->settings['flp_avail']))
 	{
 		return;
 	}
@@ -356,7 +372,7 @@ function flpavatar_private_end()
 {
 	global $db, $messagelist, $mybb, $unreadmessages, $readmessages;
 
-	if(!$mybb->settings['flp_permissions']['pm'])
+	if(!in_array('private', $mybb->settings['flp_avail']))
 	{
 		return;
 	}
@@ -405,23 +421,79 @@ function flp_format_avatar($user)
 {
 	global $mybb;
 
+	if(empty($user['avatar']))
+	{
+		// Avatar not assigned. Set optimized default
+		if(!is_file(MYBB_ROOT.OPTIMIZED_AV.DIRECTORY_SEPARATOR."0.png")) flpavatar_optimize(MYBB_ROOT."images/default_avatar.png");
+		$user['avatar'] = $mybb->asset_url.DIRECTORY_SEPARATOR.OPTIMIZED_AV.DIRECTORY_SEPARATOR."0.png";
+	}
+	else if((int)$user['uid'] > 0)
+	{
+		// Check for availability of optimized avatar and if available assign it
+		$avatar = glob(MYBB_ROOT.OPTIMIZED_AV.DIRECTORY_SEPARATOR.$user['uid'].".*");
+		$asset_url = '.';
+		if(!empty($avatar))
+		{
+			if(!empty($mybb->settings['flp_cdnlink'])) // CDN link is provided, route through it
+			{
+				$asset_url = $mybb->settings['flp_cdnlink'];
+				$asset_url = (substr($asset_url, -1) == '/') ? substr($asset_url, 0, -1) : $asset_url;
+			}
+			$user['avatar'] = str_replace(MYBB_ROOT, $asset_url.DIRECTORY_SEPARATOR, $avatar[0]);
+		}
+		else
+		{
+			// Avatar assigned, but optimised avatar not available -> Create and assign
+			$opts = flpavatar_default_size();
+			$opts['name'] = $user['uid'];
+			$opts['crop'] = (int)$mybb->settings['flp_crop'];
+			$opts['quality'] = (int)$mybb->settings['flp_quality'];
+
+			// Assign from local for the first time to give some time to CDN sync
+			$user['avatar'] = str_replace(MYBB_ROOT, $asset_url.DIRECTORY_SEPARATOR, flpavatar_optimize($user['avatar'], $opts));
+		}
+	}
 	if($mybb->version_code >= 1700)
 	{
 		// 1.8 has a slightly different syntax
-		$dimensions = ($user['avatar']) ? $user['avatardimensions'] : (defined('DEF_FP_SIZE')) ? DEF_FP_SIZE : '44|44';
+		$dimensions = ($user['avatar']) ? $user['avatardimensions'] : flpavatar_default_size(1);
 		$size = (defined('MAX_FP_SIZE')) ? MAX_FP_SIZE : $mybb->settings['postmaxavatarsize'];
 
 		$avatar = format_avatar($user['avatar'], $dimensions, $size);
 
-		return array(
+		$return = array(
 			'avatar' => $avatar['image'],
 			'dimensions' => $avatar['width_height'],
 			'username' => $user['username'],
 			'profile' => get_profile_link($user['uid'])
 		);
 	}
+	else
+	{
+		$return = format_avatar($user);
+	}
 
-	return format_avatar($user);
+	// Dimension strict mode
+	if($mybb->settings['flp_strictsize'])
+	{
+		$dimensions = [];
+		$defined = flpavatar_default_size();
+		$postmaxavatarsize = explode('x', $mybb->settings['postmaxavatarsize']);
+		$dimensions['width'] = [(int)$defined['width'], (int)$postmaxavatarsize[0]];
+		$dimensions['height'] = [(int)$defined['height'], (int)$postmaxavatarsize[1]];
+		if(defined('MAX_FP_SIZE'))
+		{
+			$maxfpsize = explode('x', MAX_FP_SIZE);
+			$dimensions['width'][] = (int)$maxfpsize[0];
+			$dimensions['height'][] = (int)$maxfpsize[1];
+		}
+		$dimensions['width'] = min($dimensions['width']);
+		$dimensions['height'] = min($dimensions['height']);
+
+		$return['dimensions'] = " width='{$dimensions['width']}' height='{$dimensions['height']}'";
+	}
+
+	return $return;
 }
 
 // format_avatar is a 1.8 function; create it if our party doesn't have >= 1.7 (LOSERS, hah).
@@ -443,10 +515,10 @@ if(!function_exists('format_avatar'))
 		}
 
 		$size = (defined('MAX_FP_SIZE')) ? MAX_FP_SIZE : $mybb->settings['postmaxavatarsize'];
-		$avatar = ($user['avatar']) ? htmlspecialchars_uni($user['avatar']) : $mybb->settings['bburl'].'/images/default_avatar.gif';
+		$avatar = ($user['avatar']) ? htmlspecialchars_uni($user['avatar']) : $mybb->asset_url.'/images/default_avatar.png';
 
 		$avatar_width_height = '';
-		$dimensions = explode('|', ($user['avatar']) ? $user['avatardimensions'] : (defined('DEF_FP_SIZE')) ? DEF_FP_SIZE : '44|44');
+		$dimensions = explode('|', ($user['avatar']) ? $user['avatardimensions'] : flpavatar_default_size(1));
 
 		if(is_array($dimensions) && $dimensions[0] && $dimensions[1])
 		{
@@ -471,4 +543,128 @@ if(!function_exists('format_avatar'))
 
 		return $users[$user['uid']];
 	}
+}
+
+function flpavatar_optimize($image, $options = [])
+{
+	global $mybb;
+
+	$image_type = ['1'=>'gif', '2'=>'jpg', '3'=>'png', '6'=>'bmp'];
+	$ext = 'jpg';
+
+	$defaults['name'] = '0';
+	$defaults['width'] = 44;
+	$defaults['height'] = 44;
+	$defaults['crop'] = 0;
+	$defaults['quality'] = 9; // This value set the compression level: 0-9 or -1, where 0 is NO COMPRESSION at all, 1 is FASTEST but produces larger files, 9 provides the best compression (smallest files) but takes a long time to compress, and -1 selects the default compiled into the zlib library.
+
+	$options = array_merge($defaults, $options);
+
+	// Detect if the image path is remote, download if yes 
+	$parsed_url = parse_url($image);
+	if(isset($parsed_url["scheme"]) && strpos($image, $mybb->asset_url) === false)
+	{
+		$temp = OPTIMIZED_AV.DIRECTORY_SEPARATOR."temp";
+		
+		$image = file_get_contents($image);
+		if(@file_put_contents($temp, $image))
+		{
+			$image = $temp;
+			$ext = $image_type[exif_imagetype($temp)];
+		}
+	}
+	else // Its a local file
+	{
+		$ext = pathinfo($image, PATHINFO_EXTENSION);
+	}
+	// Remove stamp, if any
+	$image = explode("?", $image)[0];
+	$ext = explode("?", $ext)[0];
+
+	// Start resizing
+	list($width, $height) = @getimagesize($image);
+	$w = (int)$options['width'];
+	$h = (int)$options['height'];
+	if($width && $height) $r = $width / $height;
+	if ($options['crop'] == 1) {
+		if ($width > $height) {
+			$width = ceil($width-($width*abs($r-$w/$h)));
+		} else {
+			$height = ceil($height-($height*abs($r-$w/$h)));
+		}
+		$new_width = $w;
+		$new_height = $h;
+	} else {
+		if ($w/$h > $r) {
+			$new_width = $h*$r;
+			$new_height = $h;
+		} else {
+			$new_height = $w/$r;
+			$new_width = $w;
+		}
+	}
+
+	switch($ext){
+		case "bmp":
+			$src = @imagecreatefromwbmp($image);
+		break;
+		case "png":
+			$src = @imagecreatefrompng($image);
+		break;
+		case "gif":
+			$src = @imagecreatefromgif($image);
+		break;
+		case "jpeg":
+		case "jpg":
+		default:
+			$src = @imagecreatefromjpeg($image);
+		break;
+	}
+
+	$raw_image = @imagecreatetruecolor($new_width, $new_height);
+	@imagealphablending($raw_image, false);
+	@imagesavealpha($raw_image, true);
+	@imagefilledrectangle($raw_image, 0, 0, (int)$width, (int)$height, @imagecolorallocatealpha($raw_image, 255, 255, 255, 127));
+	@imagecopyresampled($raw_image, $src, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+	$new_image = OPTIMIZED_AV.DIRECTORY_SEPARATOR.$options['name'].".".$ext;
+	$qly = (int)$options['quality'];
+
+	switch($ext){
+		case "bmp":
+			@imagewbmp($raw_image, $new_image, $qly);
+		break;
+		case "png":
+			@imagepng($raw_image, $new_image, $qly);
+		break;
+		case "gif":
+			@imagegif($raw_image, $new_image, $qly);
+		break;
+		case "jpeg":
+		case "jpg":
+		default:
+			@imagejpeg($raw_image, $new_image, $qly);
+		break;
+	}
+
+	// Destroy temporary file, if exists
+	if(isset($temp) && is_file($temp)) unlink($temp);
+
+	return $new_image;
+}
+
+function flpavatar_default_size($joined = 0)
+{
+	global $mybb;
+	$size['width'] = $size['height'] = 44; // Default value
+	$defined_size = trim($mybb->settings['flp_avatarsize']);
+	if(preg_match('/^\d+\|\d+$/', $defined_size))
+	{
+		$pix = explode("|", $defined_size);
+		if((int)$pix[0] > 0 && (int)$pix[1] > 0)
+		{
+			$size['width'] = (int)$pix[0];
+			$size['height'] = (int)$pix[1];
+		}
+	}
+	return ($joined) ? $size['width'].'|'.$size['height'] : $size;
 }
